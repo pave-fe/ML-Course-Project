@@ -1,0 +1,147 @@
+---
+title: "Machine Learning Project"
+author: "Mike Hulin"
+date: "June 16, 2018"
+output: html_document
+        keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Overview
+This analysis was performed on a set of data to determine how well participants performed an exercise involving dumbell curls.  Using data gathered from accelerometers on the participant and exercise equipment, analysis was performed to determine whether the participant performed the exercise correctly.  Five results were possible.  This analysis takes training data to determine an accurate model to predict these exercise movements from a test set of 20 variables.
+
+The analysis shows that a Random Forest model can can accurately predict these outcomes 99.4% of the time.
+
+### Getting the Data
+
+Files are downloaded from the Coursera site.  There are two files; Training and Testing.  Both files are cleaned to remove
+Variables that are missing data or do not contribute building the models.  The Training set is divided into a small sample for validation of the models.  The Training data has the true outcome for the variable - "classe" that we are trying to predict.  That is omitted from the Testing dataset and will be predicted using the final selected model.
+
+```{r get_data, include=FALSE}
+library(caret)
+library(rattle)
+library(knitr)
+
+setwd("D:/My_Files/Documents/Coursera/08_PracticalMachineLearning/Project/")
+if(!file.exists("./data")){dir.create("./data")}
+# download training set
+fileUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+if(!file.exists("./data/pml-training.csv")){
+        download.file(fileUrl,destfile="./data/pml-training.csv", mode = "wb")}
+# Download testing set
+fileUrl1 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+if(!file.exists("./data/pml-testing.csv")){
+        download.file(fileUrl1,destfile="./data/pml-testing.csv", mode = "wb")}
+
+# Load the data
+test <- read.csv("./data/pml-testing.csv", header=TRUE, na.strings = c("NA", ""))
+training <- read.csv("./data/pml-training.csv", header=TRUE, na.strings = c("NA", ""))
+
+# cleaning data to remove columns with no data or of little impact to model creation
+test <- test[, colSums(is.na(test)) == 0]
+training <- training[, colSums(is.na(training)) == 0]
+
+# Removing names, time data, and window variables from columns 1-7 into working data sets
+
+traindat <- training[, -c(1:7)] 
+testdat  <- test[, -c(1:7)]
+
+## split training set to provide a validation set
+set.seed(61618) 
+inTrain <- createDataPartition(traindat$classe, p = 0.7, list = FALSE)
+train <- traindat[inTrain, ]
+valid <- traindat[-inTrain, ]
+
+```
+
+
+### Model Selection
+
+After reviewing and cleaning the data both training and test sets contain 53 variables.  The training set contains the "classe" variable which is the outcome that will be predicted.  Three models will be used for comparison, Classification Tree, Random Forest, and finally Linear Discriminant Analysis.  In all models I make use of the cross validation technique using 5 folds.  During exploratory analysis 10 folds were also used, but did not increase accuracy significantly.
+
+```{r models}
+
+trControl <- trainControl(method = "cv", number = 5)
+```
+
+### Round 1 Classification Trees
+```{r class_trees}
+
+modFit <- train(classe~., data=train, method="rpart", trControl=trControl)
+finMod <- modFit$finalModel
+print(modFit)
+fancyRpartPlot(finMod)  ## Print the tree
+
+## prediction based on the model using partial training data(dataset = valid)
+pred1 <- predict(modFit, newdata=valid)
+confmat <- confusionMatrix(valid$classe, pred1)
+# table of accuracy of the model
+confmat$table
+
+# overall accuracy of classification trees model
+confmat$overall[1]
+
+```
+
+The classification tree model did not produce very accurate predictions.  None of the "D classe" were predicted.
+
+
+### Round 2 Random Forest Model
+
+Random Forest model is used to predict values based on the partial test data carved out for validation purposes.
+```{r random_forest}
+modFit2<- train(classe ~ ., data=train,  
+               method = "rf", trControl = trControl)
+finMod2 <- modFit2$finalModel
+print(modFit2)
+
+
+pred2 <- predict(modFit2, newdata=valid)
+confmat2 <- confusionMatrix(valid$classe, pred2)
+# Table of predictions vs true values
+confmat2$table
+# overall accuracy of the Random Forest Model
+confmat2$overall[1]
+```
+
+The Random Forest model is a significant improvement over the Classification Tree model.  99.4% accuracy was attained.  This model did take the longest time to run.
+
+### Round 3 Linear Disciminant Analysis Model
+
+In most cases Linear Discriminant Analysis will give a relatively accurate predition.  I am including it for comparison to the other models.
+
+```{r lda_model}
+modFit3 <- train(classe ~ ., data=train , method = "lda", trControl = trControl)
+finMod3 <- modFit3$finalModel
+print(modFit3)
+
+
+pred3 <- predict(modFit3, newdata=valid)
+confmat3 <- confusionMatrix(valid$classe, pred3)
+# Table of predictions vs true values
+confmat3$table
+# overall accuracy of the LDA Model
+confmat3$overall[1]
+```
+
+LDA resulted in 70.4% accuracy.  Given the results of the other models, I will select Random Forest for the final model.
+
+### Errors for the selected Model
+
+```{r}
+plot(modFit2$finalModel, main="Model Errors for Random Forest")
+```
+
+### Prediction against the Testing Data
+
+using the Random Forest model, I can now make a prediction against the test set that was provided.  The test set contains 20 tests and the goal is to predict the "classe" based on the variables.  The Random Forest model proved to be very accurate in testing against a subset of the training data provided.   Given the expected accuracy of 99.4%, I expected and out of sample error rate of 0.6%.  
+```{r}
+finalpred <- predict(modFit2, newdata = testdat)  #using the Random Forest Model
+# finalpred
+kable(data.frame(c(1:20), finalpred))  #using kable for better printing.
+```
+
