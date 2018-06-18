@@ -1,7 +1,7 @@
 ---
 title: "Machine Learning Project"
 author: "Mike Hulin"
-date: "June 16, 2018"
+date: "June 18, 2018"
 output: 
   html_document:
     keep_md: true
@@ -24,47 +24,9 @@ Variables that are missing data or do not contribute building the models.  The T
 
 ```r
 library(caret)
-```
-
-```
-## Warning: package 'caret' was built under R version 3.4.4
-```
-
-```
-## Loading required package: lattice
-```
-
-```
-## Loading required package: ggplot2
-```
-
-```
-## Warning: package 'ggplot2' was built under R version 3.4.4
-```
-
-```r
 library(rattle)
-```
-
-```
-## Warning: package 'rattle' was built under R version 3.4.4
-```
-
-```
-## Rattle: A free graphical interface for data science with R.
-## Version 5.1.0 Copyright (c) 2006-2017 Togaware Pty Ltd.
-## Type 'rattle()' to shake, rattle, and roll your data.
-```
-
-```r
 library(knitr)
-```
 
-```
-## Warning: package 'knitr' was built under R version 3.4.4
-```
-
-```r
 setwd("D:/My_Files/Documents/Coursera/08_PracticalMachineLearning/Project/")
 if(!file.exists("./data")){dir.create("./data")}
 # download training set
@@ -136,7 +98,7 @@ print(modFit)
 ```
 
 ```r
-fancyRpartPlot(finMod)  ## Print the tree
+fancyRpartPlot(finMod, main = "Classification Tree Plot", sub = "Predicted Exercise Outcomes")  ## Print the tree
 ```
 
 ![](ML_project_files/figure-html/class_trees-1.png)<!-- -->
